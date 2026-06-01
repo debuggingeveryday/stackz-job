@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y \
 
 # Upgrade pip and install Python packages
 RUN pip install --upgrade pip \
-    && pip install kivy icecream pyinstaller
+    && pip install kivy icecream pyinstaller pillow
 
 # Kivy environment variables
 ENV KIVY_WINDOW=sdl2
