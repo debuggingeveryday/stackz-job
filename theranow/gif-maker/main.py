@@ -1,5 +1,6 @@
 import io
 import glob
+import os
 from PIL import Image as PILImage
 from PIL import ImageGrab
 from PIL import ImageSequence
@@ -10,15 +11,22 @@ from kivy.uix.image import Image as KivyImage
 from kivy.core.image import Image as CoreImage
 from kivy.graphics import Rectangle, Color
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 from icecream import ic
 from kivy.config import Config
 
 # 1 enables exit on escape, 0 disables it
 Config.set("kivy", "exit_on_escape", "1")
 
-
 class GifMakerApp(App):
     def build(self):
+        self.frames_dir = "frames"
+        self.gifs_dir = "gifs"
+
+        os.makedirs(self.frames_dir, exist_ok=True)
+        os.makedirs(self.gifs_dir, exist_ok=True)
+
+        
         self.crop_box = None
         self.is_crop_mode = False
         self.layout = FloatLayout()
@@ -31,6 +39,10 @@ class GifMakerApp(App):
         self.kivy_img = KivyImage(source="")
         self.layout.add_widget(self.kivy_img)
 
+        # Input text
+        self.file_name_input = TextInput(text='', size_hint=(1, None), height=50, multiline=False, hint_text='Enter output GIF name and press Enter')
+        self.file_name_input.bind(on_text_validate=self.on_enter)
+
         # Trigger button
         self.paste_button = Button(
             text="Paste Image from Clipboard", size_hint=(1, None), height=50
@@ -40,8 +52,11 @@ class GifMakerApp(App):
             text=f"Crop Frame {self.frame_index}", size_hint=(1, None), height=50
         )
 
+        self.finish_button = Button(text=f"Create again?", size_hint=(1, None), height=50)
+
         self.cancel_crop_button = Button(text=f"Cancel", size_hint=(1, None), height=50)
         self.done_button = Button(text=f"Done", size_hint=(1, None), height=50)
+        self.finish_button.bind(on_press=self.reset)
 
         self.option_layout.add_widget(self.crop_button)
         self.option_layout.add_widget(self.cancel_crop_button)
@@ -65,28 +80,53 @@ class GifMakerApp(App):
 
         return self.layout
 
-    def on_done(self, instance):
-        frames = [PILImage.open(f) for f in sorted(glob.glob("frame_*.png"))]
+    def reset(self, instance):
+        new_root = self.build()
+
+        self.root_window.remove_widget(self.root)
+        self.root = new_root
+        self.root_window.add_widget(self.root)
+
+        return True
+
+    def on_enter(self, instance):
+        self.current_rect = None
+        self.crop_rect = None
+        self.is_crop_mode = False
+
+        file_name = instance.text
+
+        frames = [PILImage.open(f) for f in sorted(glob.glob("frames/frame_*.png"))]
         frame_one = frames[0]
         frame_one.save(
-            "animation.gif",
+            f"gifs/{file_name}.gif",
             format="GIF",
             append_images=frames[1:],
             save_all=True,
             duration=1500,
             loop=0,
         )
-        print("Done")
 
+        self.file_name_input.text = ""
+
+        self.layout.add_widget(self.finish_button)
+
+        return True
+
+    def on_done(self, instance):
+        self.layout.add_widget(self.file_name_input)
+        self.on_crop(instance)
+        self.is_crop_mode = False
         return True
 
     def on_crop(self, instance):
         # 4. Crop using Pillow and save the selection
         cropped_img = self.pil_img.crop(self.crop_box)
-        cropped_img.save(f"frame_{self.frame_index}.png")
+        cropped_img.save(f"frames/frame_{self.frame_index}.png")
         self.frame_index += 1
         self.layout.remove_widget(self.option_layout)
         self.is_crop_mode = True
+        return True
 
     def paste_image(self, instance):
         try:
@@ -162,7 +202,7 @@ class GifMakerApp(App):
         return True
 
     def on_touch_up(self, instance, touch):
-        if self.crop_rect:
+        if self.crop_rect and self.is_crop_mode == True:
             instance.canvas.remove(self.crop_rect)
             self.crop_rect = None
 
@@ -200,7 +240,7 @@ class GifMakerApp(App):
             self.crop_box = (pil_x1, pil_y1, pil_x2, pil_y2)
 
             with instance.canvas:
-                Color(0, 1, 0, 0.5)  # Red, 50% transparent
+                Color(0, 1, 0, 0.5)  # Green, 50% transparent
                 self.crop_rect = Rectangle(pos=self.start_pos, size=(x2 - x1, y2 - y1))
 
             self.layout.remove_widget(self.paste_button)
