@@ -1,5 +1,7 @@
 build
 dist
+gifs
+frames
 *.csv
 .venv
 *.png
