@@ -21,8 +21,8 @@ Config.set("kivy", "exit_on_escape", "1")
 
 class GifMakerApp(App):
     def build(self):
-        self.frames_dir = "frames"
-        self.gifs_dir = "gifs"
+        self.frames_dir = "../frames"
+        self.gifs_dir = "../gifs"
 
         os.makedirs(self.frames_dir, exist_ok=True)
         os.makedirs(self.gifs_dir, exist_ok=True)
