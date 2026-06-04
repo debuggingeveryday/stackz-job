@@ -18,6 +18,7 @@ from kivy.config import Config
 # 1 enables exit on escape, 0 disables it
 Config.set("kivy", "exit_on_escape", "1")
 
+
 class GifMakerApp(App):
     def build(self):
         self.frames_dir = "frames"
@@ -26,21 +27,26 @@ class GifMakerApp(App):
         os.makedirs(self.frames_dir, exist_ok=True)
         os.makedirs(self.gifs_dir, exist_ok=True)
 
-        
         self.crop_box = None
         self.is_crop_mode = False
         self.layout = FloatLayout()
         self.option_layout = BoxLayout(orientation="horizontal")
 
         self.pil_img = None
-        self.frame_index = 1
+        self.frame_index = 0
 
         # Image widget to display the pasted image
         self.kivy_img = KivyImage(source="")
         self.layout.add_widget(self.kivy_img)
 
         # Input text
-        self.file_name_input = TextInput(text='', size_hint=(1, None), height=50, multiline=False, hint_text='Enter output GIF name and press Enter')
+        self.file_name_input = TextInput(
+            text="",
+            size_hint=(1, None),
+            height=50,
+            multiline=False,
+            hint_text="Enter output GIF name and press Enter",
+        )
         self.file_name_input.bind(on_text_validate=self.on_enter)
 
         # Trigger button
@@ -52,7 +58,9 @@ class GifMakerApp(App):
             text=f"Crop Frame {self.frame_index}", size_hint=(1, None), height=50
         )
 
-        self.finish_button = Button(text=f"Create again?", size_hint=(1, None), height=50)
+        self.finish_button = Button(
+            text=f"Create again?", size_hint=(1, None), height=50
+        )
 
         self.cancel_crop_button = Button(text=f"Cancel", size_hint=(1, None), height=50)
         self.done_button = Button(text=f"Done", size_hint=(1, None), height=50)
@@ -96,16 +104,41 @@ class GifMakerApp(App):
 
         file_name = instance.text
 
+        # 1. Load all frames
         frames = [PILImage.open(f) for f in sorted(glob.glob("frames/frame_*.png"))]
-        frame_one = frames[0]
-        frame_one.save(
-            f"gifs/{file_name}.gif",
-            format="GIF",
-            append_images=frames[1:],
-            save_all=True,
-            duration=1500,
-            loop=0,
-        )
+        frames = frames[: self.frame_index :]
+
+        if frames:
+            # 2. Find the largest width and largest height among all frames
+            max_w = max(img.width for img in frames)
+            max_h = max(img.height for img in frames)
+            max_size = (max_w, max_h)
+
+            # 3. Resize/Pad all frames to match the largest size
+            # This prevents warping and ensures every frame fits perfectly
+            unified_frames = []
+            for img in frames:
+                # Create a black background canvas of the maximum size
+                canvas = PILImage.new("RGBA", max_size, (255, 255, 255, 0))
+
+                # Center the original image on the canvas
+                x_offset = (max_w - img.width) // 2
+                y_offset = (max_h - img.height) // 2
+                canvas.paste(img, (x_offset, y_offset))
+
+                # Convert to RGB (required for saving standard GIFs cleanly)
+                unified_frames.append(canvas.convert("RGB"))
+
+            # 4. Save the GIF using the unified frames
+            frame_one = unified_frames[0]
+            frame_one.save(
+                f"gifs/{file_name}.gif",
+                format="GIF",
+                append_images=unified_frames[1:],
+                save_all=True,
+                duration=1500,
+                loop=0,
+            )
 
         self.file_name_input.text = ""
 
@@ -245,7 +278,7 @@ class GifMakerApp(App):
 
             self.layout.remove_widget(self.paste_button)
 
-            self.crop_button.text = f"Crop Frame {self.frame_index}"
+            self.crop_button.text = f"Crop Frame {self.frame_index + 1}"
 
             self.layout.add_widget(self.option_layout)
 
