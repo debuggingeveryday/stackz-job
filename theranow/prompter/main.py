@@ -75,7 +75,6 @@ class FilePicker(BoxLayout):
             "Comments",
             "Correction Status",
             "Correction done on",
-            "Upload status",
             "Step1 Prompt",
             "Step2 Prompt",
             "Step3 Prompt",
@@ -89,7 +88,6 @@ class FilePicker(BoxLayout):
             "Audit Done on",
             "Correction Status",
             "Correction done on",
-            "Upload status",
             "Audit Outcome",
             "Comments",
         ]
