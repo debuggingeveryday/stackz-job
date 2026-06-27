@@ -4,3 +4,4 @@ setuptools
 wheel
 pygame
 pillow
+configparser

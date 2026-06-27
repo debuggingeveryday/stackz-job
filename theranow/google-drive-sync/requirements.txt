@@ -1,0 +1,5 @@
+watchdog
+PyDrive2
+Pillow
+icecream
+configparser

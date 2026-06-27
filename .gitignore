@@ -4,3 +4,4 @@ frames
 gifs
 *.csv
 .venv
+*.spec

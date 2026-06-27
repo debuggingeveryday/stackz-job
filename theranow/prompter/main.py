@@ -9,6 +9,24 @@ from kivy.core.clipboard import Clipboard
 import csv
 import json
 from icecream import ic
+import configparser
+from pathlib import Path
+
+# Initialize the parser
+config = configparser.ConfigParser()
+
+config_file_path = Path("config.ini")
+
+if not config_file_path.is_file():
+    raise FileNotFoundError("Config file is missing")
+
+config.read("config.ini")
+
+headers = config.get("settings", "headers").split(",")
+remove_column = config.get("settings", "remove_column").split(",")
+assigned_by = config.get("settings", "assigned_by")
+
+HEADER_ASSIGNED_BY = 17
 
 
 class FilePicker(BoxLayout):
@@ -50,48 +68,6 @@ class FilePicker(BoxLayout):
     def select_file(self, instance):
         self.selected = self.filechooser.selection
 
-        headers = [
-            "Exercise ID",
-            "Exercise Name",
-            "Duplicate Check",
-            "Position",
-            "Prop Used",
-            "Main Body Part",
-            "Main Joint",
-            "Main Muscle",
-            "Category",
-            "Movement Type",
-            "Difficulty",
-            "Rehab Phase",
-            "Conditions",
-            "Keywords",
-            "Description",
-            "GIF Path",
-            "Created on",
-            "Created by",
-            "Audit Status",
-            "Audit Done on",
-            "Audit Outcome",
-            "Comments",
-            "Correction Status",
-            "Correction done on",
-            "Step1 Prompt",
-            "Step2 Prompt",
-            "Step3 Prompt",
-        ]
-
-        keys_to_remove = [
-            "GIF Path",
-            "Created on",
-            "Created by",
-            "Audit Status",
-            "Audit Done on",
-            "Correction Status",
-            "Correction done on",
-            "Audit Outcome",
-            "Comments",
-        ]
-
         if not self.selected:
             self.label.text = "No file selected"
             return
@@ -104,10 +80,15 @@ class FilePicker(BoxLayout):
         with open(filepath, "r", newline="") as file:
             reader = csv.reader(file)
 
+            count = 0
+
             for row in reader:
                 item = {}
                 is_correction_needed = False
                 important_correction_value = ""
+
+                if row[HEADER_ASSIGNED_BY] != assigned_by:
+                    continue
 
                 for i, header in enumerate(headers):
                     if not i < len(row):
@@ -118,17 +99,27 @@ class FilePicker(BoxLayout):
                         is_correction_needed = True
                         pass
 
-                    if header == "Comments" and is_correction_needed == True:
+                    elif header == "Comments" and is_correction_needed == True:
                         important_correction_value = row[i]
                         pass
 
-                    item[header] = row[i]
+                    elif (
+                        header == "Step1 Prompt"
+                        or header == "Step2 Prompt"
+                        or header == "Step3 Prompt"
+                    ):
+                        number = header[4]
+                        item[f"Image {number}"] = row[i]
+                        pass
+
+                    else:
+                        item[header] = row[i]
 
                 if is_correction_needed == True:
                     item["Important Correction"] = important_correction_value
                     is_correction_needed = False
 
-                for key in keys_to_remove:
+                for key in remove_column:
                     item.pop(key, None)
 
                 self.data.append(item)
@@ -222,9 +213,11 @@ class FilePicker(BoxLayout):
 
     def copy_title_function(self, instance, value):
         Clipboard.copy(value)
+        instance.background_color = (1.0, 0.0, 0.0, 1.0)
 
     def copy_prompt_function(self, instance, value):
         Clipboard.copy(str(value))
+        instance.background_color = (1.0, 0.0, 0.0, 1.0)
 
     def remove_function(self, instance, index):
         # remove data
