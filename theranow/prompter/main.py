@@ -27,7 +27,8 @@ remove_column = config.get("settings", "remove_column").split(",")
 assigned_by = config.get("settings", "assigned_by")
 
 HEADER_ASSIGNED_BY = 17
-
+HEADER_UPLOAD_STATUS = 24
+HEADER_COMMENTS = 21
 
 class FilePicker(BoxLayout):
 
@@ -90,10 +91,22 @@ class FilePicker(BoxLayout):
                 if row[HEADER_ASSIGNED_BY] != assigned_by:
                     continue
 
+                if row[HEADER_UPLOAD_STATUS] == "Yes":
+                    continue
+
+                if row[HEADER_COMMENTS] == "Already in TN":
+                    continue
+
+                print(f"---------------------\n")
+
                 for i, header in enumerate(headers):
                     if not i < len(row):
                         item[header] = ""
                         break
+
+                    ic(header)
+                    ic(row[i])
+                    print(f"\n")
 
                     if header == "Audit Outcome" and row[i] == "Correction need":
                         is_correction_needed = True
@@ -109,7 +122,7 @@ class FilePicker(BoxLayout):
                         or header == "Step3 Prompt"
                     ):
                         number = header[4]
-                        item[f"Image {number}"] = row[i]
+                        item[f"Image {number}"] = row[i] 
                         pass
 
                     else:
